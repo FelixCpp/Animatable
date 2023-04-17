@@ -58,6 +58,16 @@ namespace ui
 			return initialValue + (targetValue - initialValue) * m_Progress;
 		}
 
+		void Reverse()
+		{
+			m_Forward = not m_Forward;
+		}
+
+		void Repeat()
+		{
+			m_ElapsedTimeInSeconds = 0.0f;
+		}
+
 	private:
 
 		EaseFunction m_Ease;
@@ -81,13 +91,13 @@ namespace ui
 
 		bool IsDone() const
 		{
-			return m_Animation.IsDone();
+			return not IsWaiting() and m_Animation.IsDone();
 		}
 
 		template <typename T>
 		void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime)
 		{
-			if (m_DelayInSeconds > 0.0f)
+			if (IsWaiting())
 			{
 				m_DelayInSeconds -= deltaTime;
 				return;
@@ -99,10 +109,20 @@ namespace ui
 		template <typename T>
 		T GetValue(const T& initialValue, const T& targetValue, const T& currentValue) const
 		{
+			if (IsWaiting())
+			{
+				return initialValue;
+			}
+
 			return m_Animation.GetValue(initialValue, targetValue, currentValue);
 		}
 
 	private:
+
+		bool IsWaiting() const
+		{
+			return m_DelayInSeconds > 0.0f;
+		}
 
 		float m_DelayInSeconds;
 		TAnimation m_Animation;
@@ -191,6 +211,60 @@ namespace ui
 				durationInSeconds
 			)
 		);
+	}
+
+	class InstantAnimation
+	{
+	public:
+
+		bool IsDone() const
+		{
+			return true;
+		}
+
+		template <typename T>
+		void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime)
+		{
+		}
+
+		template <typename T>
+		T GetValue(const T& initialValue, const T& targetValue, const T& currentValue) const
+		{
+			return targetValue;
+		}
+
+	};
+
+	constexpr AnimationBuilder<InstantAnimation> Instant()
+	{
+		return AnimationBuilder(InstantAnimation());
+	}
+
+	class NeverAnimation
+	{
+	public:
+
+		bool IsDone() const
+		{
+			return false;
+		}
+
+		template <typename T>
+		void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime)
+		{
+		}
+
+		template <typename T>
+		T GetValue(const T& initialValue, const T& targetValue, const T& currentValue) const
+		{
+			return initialValue;
+		}
+
+	};
+
+	constexpr AnimationBuilder<NeverAnimation> Never()
+	{
+		return AnimationBuilder(NeverAnimation());
 	}
 	
 	template <typename T>
