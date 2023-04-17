@@ -110,6 +110,40 @@ namespace ui
 	};
 
 	template <typename TAnimation>
+	class SpeedAnimationDecorator
+	{
+	public:
+
+		constexpr explicit SpeedAnimationDecorator(TAnimation animation, float speedFactor) :
+			m_SpeedFactor(speedFactor),
+			m_Animation(std::move(animation))
+		{}
+
+		bool IsDone() const
+		{
+			return m_Animation.IsDone();
+		}
+
+		template <typename T>
+		void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime)
+		{
+			m_Animation.Update(initialValue, targetValue, currentValue, deltaTime * m_SpeedFactor);
+		}
+
+		template <typename T>
+		T GetValue(const T& initialValue, const T& targetValue, const T& currentValue) const
+		{
+			return m_Animation.GetValue(initialValue, targetValue, currentValue);
+		}
+
+	private:
+
+		float m_SpeedFactor;
+		TAnimation m_Animation;
+
+	};
+	
+	template <typename TAnimation>
 	class AnimationBuilder
 	{
 	public:
@@ -124,6 +158,16 @@ namespace ui
 				DelayAnimationDecorator<TAnimation>(
 					m_Animation,
 					delayInSeconds
+				)
+			);
+		}
+
+		AnimationBuilder<SpeedAnimationDecorator<TAnimation>> Speed(float speedFactor) const
+		{
+			return AnimationBuilder<SpeedAnimationDecorator<TAnimation>>(
+				SpeedAnimationDecorator<TAnimation>(
+					m_Animation,
+					speedFactor
 				)
 			);
 		}
@@ -148,7 +192,7 @@ namespace ui
 			)
 		);
 	}
-
+	
 	template <typename T>
 	class Animatable
 	{
