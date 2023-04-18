@@ -41,14 +41,17 @@ namespace ui
 			return m_ElapsedTimeInSeconds >= m_DurationInSeconds;
 		}
 
+		void OnDone()
+		{
+		}
+
 		template <typename T>
 		void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime)
 		{
 			m_ElapsedTimeInSeconds = std::clamp(m_ElapsedTimeInSeconds + deltaTime, 0.0f, m_DurationInSeconds);
 
 			float progress = m_ElapsedTimeInSeconds / m_DurationInSeconds;
-			float direction = m_Forward ? 1.0f : -1.0f;
-			float x = progress * direction;
+			float x = m_Forward ? progress : (1.0f - progress);
 			m_Progress = m_Ease(x);
 		}
 
@@ -94,6 +97,11 @@ namespace ui
 			return not IsWaiting() and m_Animation.IsDone();
 		}
 
+		void OnDone()
+		{
+			m_Animation.OnDone();
+		}
+
 		template <typename T>
 		void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime)
 		{
@@ -115,6 +123,16 @@ namespace ui
 			}
 
 			return m_Animation.GetValue(initialValue, targetValue, currentValue);
+		}
+
+		void Repeat()
+		{
+			m_Animation.Repeat();
+		}
+
+		void Reverse()
+		{
+			m_Animation.Reverse();
 		}
 
 	private:
@@ -144,6 +162,11 @@ namespace ui
 			return m_Animation.IsDone();
 		}
 
+		void OnDone()
+		{
+			m_Animation.OnDone();
+		}
+
 		template <typename T>
 		void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime)
 		{
@@ -156,13 +179,97 @@ namespace ui
 			return m_Animation.GetValue(initialValue, targetValue, currentValue);
 		}
 
+		void Repeat()
+		{
+			m_Animation.Repeat();
+		}
+
+		void Reverse()
+		{
+			m_Animation.Reverse();
+		}
+
 	private:
 
 		float m_SpeedFactor;
 		TAnimation m_Animation;
 
 	};
-	
+
+	template <typename TAnimation, typename TRepeatPredicate, typename TReversePredicate>
+	class RepeatAnimationDecorator
+	{
+	public:
+
+		constexpr explicit RepeatAnimationDecorator(TAnimation animation, TRepeatPredicate repeatPredicate, TReversePredicate reversePredicate):
+			m_Animation(std::move(animation)),
+			m_RepeatPredicate(std::move(repeatPredicate)),
+			m_ReversePredicate(reversePredicate)
+		{}
+
+		bool IsDone() const
+		{
+			return m_Animation.IsDone();
+		}
+
+		void OnDone()
+		{
+			if (m_RepeatPredicate())
+			{
+				Repeat();
+
+				if (m_ReversePredicate())
+				{
+					Reverse();
+				}
+			}
+		}
+
+		template <typename T>
+		void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime)
+		{
+			m_Animation.Update(initialValue, targetValue, currentValue, deltaTime);
+		}
+
+		template <typename T>
+		T GetValue(const T& initialValue, const T& targetValue, const T& currentValue) const
+		{
+			return m_Animation.GetValue(initialValue, targetValue, currentValue);
+		}
+
+		void Repeat()
+		{
+			m_Animation.Repeat();
+		}
+
+		void Reverse()
+		{
+			m_Animation.Reverse();
+		}
+
+	private:
+
+		TAnimation m_Animation;
+		TRepeatPredicate m_RepeatPredicate;
+		TReversePredicate m_ReversePredicate;
+
+	};
+
+	struct Predicate
+	{
+		inline static constexpr auto Always = [] { return true; };
+		inline static constexpr auto Never = [] { return false; };
+		
+		typedef decltype(Always) AlwaysType;
+		typedef decltype(Never) NeverType;
+	};
+
+	template <typename TAnimation>
+	class AnimationBuilder;
+
+	template <typename TAnimation>
+	AnimationBuilder(TAnimation) -> AnimationBuilder<TAnimation>;
+
 	template <typename TAnimation>
 	class AnimationBuilder
 	{
@@ -172,7 +279,7 @@ namespace ui
 			m_Animation(std::move(animation))
 		{}
 
-		AnimationBuilder<DelayAnimationDecorator<TAnimation>> Delay(float delayInSeconds) const
+		auto Delay(float delayInSeconds) const
 		{
 			return AnimationBuilder<DelayAnimationDecorator<TAnimation>>(
 				DelayAnimationDecorator<TAnimation>(
@@ -182,12 +289,70 @@ namespace ui
 			);
 		}
 
-		AnimationBuilder<SpeedAnimationDecorator<TAnimation>> Speed(float speedFactor) const
+		auto Speed(float speedFactor) const
 		{
 			return AnimationBuilder<SpeedAnimationDecorator<TAnimation>>(
 				SpeedAnimationDecorator<TAnimation>(
 					m_Animation,
 					speedFactor
+				)
+			);
+		}
+
+		template <
+			typename TRepeatPredicate = Predicate::AlwaysType,
+			typename TReversePredicate = Predicate::NeverType
+		>
+		auto Repeat(
+			TRepeatPredicate repeatPredicate = Predicate::Always,
+			TReversePredicate reversePredicate = Predicate::Never
+		) const
+		{
+			return AnimationBuilder<RepeatAnimationDecorator<TAnimation, TRepeatPredicate, TReversePredicate>>(
+				RepeatAnimationDecorator<TAnimation, TRepeatPredicate, TReversePredicate>(
+					m_Animation,
+					std::move(repeatPredicate),
+					std::move(reversePredicate)
+				)
+			);
+		}
+
+		template <typename TReversePredicate = Predicate::NeverType>
+		auto RepeatFor(
+			std::size_t count,
+			TReversePredicate reversePredicate = Predicate::Never
+		) const
+		{
+			auto repeatPredicate = [count, i = (std::size_t)0]() mutable
+			{
+				return ++i < count;
+			};
+
+			return AnimationBuilder<RepeatAnimationDecorator<TAnimation, decltype(repeatPredicate), TReversePredicate>>(
+				RepeatAnimationDecorator<TAnimation, decltype(repeatPredicate), TReversePredicate>(
+					m_Animation,
+					std::move(repeatPredicate),
+					std::move(reversePredicate)
+				)
+			);
+		}
+
+		template <typename TRepeatPredicate = Predicate::AlwaysType>
+		auto ReverseFor(
+			std::size_t count,
+			TRepeatPredicate repeatPredicate = Predicate::Always
+		) const
+		{
+			auto reversePredicate = [count, i = (std::size_t)0]() mutable
+			{
+				return i++ < count;
+			};
+
+			return AnimationBuilder<RepeatAnimationDecorator<TAnimation, TRepeatPredicate, decltype(reversePredicate)>>(
+				RepeatAnimationDecorator<TAnimation, TRepeatPredicate, decltype(reversePredicate)>(
+					m_Animation,
+					std::move(repeatPredicate),
+					std::move(reversePredicate)
 				)
 			);
 		}
@@ -222,6 +387,10 @@ namespace ui
 			return true;
 		}
 
+		void OnDone() const
+		{
+		}
+
 		template <typename T>
 		void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime)
 		{
@@ -231,6 +400,14 @@ namespace ui
 		T GetValue(const T& initialValue, const T& targetValue, const T& currentValue) const
 		{
 			return targetValue;
+		}
+
+		void Repeat() const
+		{
+		}
+
+		void Reverse() const
+		{
 		}
 
 	};
@@ -249,6 +426,10 @@ namespace ui
 			return false;
 		}
 
+		void OnDone() const
+		{
+		}
+
 		template <typename T>
 		void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime)
 		{
@@ -258,6 +439,14 @@ namespace ui
 		T GetValue(const T& initialValue, const T& targetValue, const T& currentValue) const
 		{
 			return initialValue;
+		}
+
+		void Repeat() const
+		{
+		}
+
+		void Reverse() const
+		{
 		}
 
 	};
@@ -279,6 +468,7 @@ namespace ui
 			virtual ~IAnimationWrapper() = default;
 
 			virtual bool IsDone() const = 0;
+			virtual void OnDone() = 0;
 			virtual void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime) = 0;
 			virtual T GetValue(const T& initialValue, const T& targetValue, const T& currentValue) const = 0;
 
@@ -299,6 +489,11 @@ namespace ui
 				return m_Animation.IsDone();
 			}
 
+			virtual void OnDone() override
+			{
+				m_Animation.OnDone();
+			}
+
 			virtual void Update(const T& initialValue, const T& targetValue, const T& currentValue, float deltaTime) override
 			{
 				m_Animation.Update(initialValue, targetValue, currentValue, deltaTime);
@@ -308,7 +503,7 @@ namespace ui
 			{
 				return m_Animation.GetValue(initialValue, targetValue, currentValue);
 			}
-
+			
 		private:
 
 			TAnimation m_Animation;
@@ -347,7 +542,12 @@ namespace ui
 			
 			if (m_Animation->IsDone())
 			{
-				m_Animation.reset();
+				m_Animation->OnDone();
+
+				if (m_Animation->IsDone())
+				{
+					m_Animation.reset();
+				}
 			}
 		}
 
