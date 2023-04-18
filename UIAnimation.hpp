@@ -10,13 +10,221 @@
 
 #include <type_traits> // std::move
 #include <memory> // std::unique_ptr
-#include <algorithm>
+#include <algorithm> // std::clamp
+#include <numbers>
 
 namespace ui
 {
 	namespace ease
 	{
-		inline float Linear(float x) { return x; }
+		inline float Linear(float x)
+		{
+			return x;
+		}
+
+		inline float InSine(float x)
+		{
+			return 1.0f - std::cos((x * std::numbers::pi_v<float>) / 2.0f);
+		}
+
+		inline float OutSine(float x)
+		{
+			return std::sin((x * std::numbers::pi_v<float>) / 2.0f);
+		}
+
+		inline float InOutSine(float x)
+		{
+			return -(std::cos(std::numbers::pi_v<float> * x) - 1.0f) / 2.0f;
+		}
+
+		inline float InCubic(float x)
+		{
+			return x * x * x;
+		}
+
+		inline float OutCubic(float x)
+		{
+			return 1.0f - std::pow(1.0f - x, 3.0f);
+		}
+
+		inline float InOutCubic(float x)
+		{
+			return x < 0.5f ? 4.0f * x * x * x : 1.0f - std::pow(-2.0f * x + 2.0f, 3.0f) / 2.0f;
+		}
+
+		inline float InQuint(float x)
+		{
+			return x * x * x * x * x;
+		}
+
+		inline float OutQuint(float x)
+		{
+			return 1.0f - std::pow(1.0f - x, 5.0f);
+		}
+
+		inline float InOutQuint(float x)
+		{
+			return x < 0.5f ? 16.0f * x * x * x * x * x : 1.0f - std::pow(-2.0f * x + 2.0f, 5.0f) / 2.0f;
+		}
+
+		inline float InCirc(float x)
+		{
+			return 1.0f - std::sqrt(1.0f - std::pow(x, 2.0f));
+		}
+
+		inline float OutCirc(float x)
+		{
+			return std::sqrt(1.0f - std::pow(x - 1.0f, 2.0f));
+		}
+
+		inline float InOutCirc(float x)
+		{
+			return x < 0.5f
+				? (1.0f - std::sqrt(1.0f - std::pow(2.0f * x, 2.0f))) / 2.0f
+				: (std::sqrt(1.0f - std::pow(-2.0f * x + 2.0f, 2.0f)) + 1.0f) / 2.0f;
+		}
+
+		inline float InElastic(float x)
+		{
+			static constexpr float c4 = (2.0f * std::numbers::pi_v<float>) / 3.0f;
+
+			return x == 0.0f
+				? 0.0f
+				: x == 1.0f
+				? 1.0f
+				: -std::pow(2.0f, 10.0f * x - 10.0f) * std::sin((x * 10.0f - 10.75f) * c4);
+		}
+
+		inline float OutElastic(float x)
+		{
+			static constexpr float c4 = (2.0f * std::numbers::pi_v<float>) / 3.0f;
+
+			return x == 0.0f
+				? 0.0f
+				: x == 1.0f
+				? 1.0f
+				: pow(2.0f, -10.0f * x) * sin((x * 10.0f - 0.75f) * c4) + 1.0f;
+		}
+
+		inline float InOutElastic(float x)
+		{
+			static constexpr float c5 = (2.0f * std::numbers::pi_v<float>) / 4.5f;
+
+			return x == 0.0f
+				? 0.0f
+				: x == 1.0f
+				? 1.0f
+				: x < 0.5f
+				? -(std::pow(2.0f, 20.0f * x - 10.0f) * std::sin((20.0f * x - 11.125f) * c5)) / 2.0f
+				: (std::pow(2.0f, -20.0f * x + 10.0f) * std::sin((20.0f * x - 11.125f) * c5)) / 2.0f + 1.0f;
+		}
+
+		inline float InQuad(float x)
+		{
+			return x * x;
+		}
+
+		inline float OutQuad(float x)
+		{
+			return 1.0f - (1.0f - x) * (1.0f - x);
+		}
+
+		inline float InOutQuad(float x)
+		{
+			return x < 0.5f ? 2.0f * x * x : 1.0f - std::pow(-2.0f * x + 2.0f, 2.0f) / 2.0f;
+		}
+
+		inline float InQuart(float x)
+		{
+			return x * x * x * x;
+		}
+
+		inline float OutQuart(float x)
+		{
+			return 1.0f - std::pow(1.0f - x, 4.0f);
+		}
+
+		inline float InOutQuart(float x)
+		{
+			return x < 0.5f ? 8.0f * x * x * x * x : 1.0f - std::pow(-2.0f * x + 2.0f, 4.0f) / 2.0f;
+		}
+
+		inline float InExpo(float x)
+		{
+			return x == 0.0f ? 0.0f : std::pow(2.0f, 10.0f * x - 10.0f);
+		}
+
+		inline float OutExpo(float x)
+		{
+			return x == 1.0f ? 1.0f : 1.0f - std::pow(2.0f, -10.0f * x);
+		}
+
+		inline float InOutExpo(float x)
+		{
+			return x == 0.0f
+				? 0.0f
+				: x == 1.0f
+				? 1.0f
+				: x < 0.5f ? pow(2.0f, 20.0f * x - 10.0f) / 2.0f
+				: (2.0f - pow(2.0f, -20.0f * x + 10.0f)) / 2.0f;
+		}
+
+		inline float InBack(float x)
+		{
+			static constexpr float c1 = 1.70158f;
+			static constexpr float c3 = c1 + 1.0f;
+
+			return c3 * x * x * x - c1 * x * x;
+		}
+
+		inline float OutBack(float x)
+		{
+			static constexpr float c1 = 1.70158f;
+			static constexpr float c3 = c1 + 1.0f;
+			return 1.0f + c3 * std::pow(x - 1.0f, 3.0f) + c1 * std::pow(x - 1.0f, 2.0f);
+		}
+
+		inline float InOutBack(float x)
+		{
+			static constexpr float c1 = 1.70158f;
+			static constexpr float c2 = c1 * 1.525f;
+
+			return x < 0.5f
+				? (std::pow(2.0f * x, 2.0f) * ((c2 + 1.0f) * 2.0f * x - c2)) / 2.0f
+				: (std::pow(2.0f * x - 2.0f, 2.0f) * ((c2 + 1.0f) * (x * 2.0f - 2.0f) + c2) + 2.0f) / 2.0f;
+		}
+
+		inline float OutBounce(float x)
+		{
+			static constexpr float n1 = 7.5625f;
+			static constexpr float d1 = 2.75f;
+
+			if (x < 1.0f / d1) {
+				return n1 * x * x;
+			}
+
+			if (x < 2.0f / d1) {
+				return n1 * (x - 1.5f / d1) * x + 0.75f;
+			}
+
+			if (x < 2.5f / d1) {
+				return n1 * (x - 2.25f / d1) * x + 0.9375f;
+			}
+
+			return n1 * (x - 2.625f / d1) * x + 0.984375f;
+		}
+
+		inline float InBounce(float x)
+		{
+			return 1.0f - OutBounce(1.0f - x);
+		}
+
+		inline float InOutBounce(float x)
+		{
+			return x < 0.5f
+				? (1.0f - OutBounce(1.0f - 2.0f * x)) / 2.0f
+				: (1.0f + OutBounce(2.0f * x - 1.0f)) / 2.0f;
+		}
 	}
 
 	typedef float(*EaseFunction)(float);
@@ -263,13 +471,7 @@ namespace ui
 		typedef decltype(Always) AlwaysType;
 		typedef decltype(Never) NeverType;
 	};
-
-	template <typename TAnimation>
-	class AnimationBuilder;
-
-	template <typename TAnimation>
-	AnimationBuilder(TAnimation) -> AnimationBuilder<TAnimation>;
-
+	
 	template <typename TAnimation>
 	class AnimationBuilder
 	{
@@ -377,7 +579,277 @@ namespace ui
 			)
 		);
 	}
-
+	constexpr AnimationBuilder<TimedAnimation> EaseInSine(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InSine,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseOutSine(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::OutSine,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInOutSine(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InOutSine,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInCubic(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InCubic,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseOutCubic(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::OutCubic,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInOutCubic(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InOutCubic,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInQuint(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InQuint,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseOutQuint(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::OutQuint,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInOutQuint(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InOutQuint,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInCirc(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InCirc,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseOutCirc(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::OutCirc,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInOutCirc(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InOutCirc,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInElastic(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InElastic,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseOutElastic(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::OutElastic,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInOutElastic(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InOutElastic,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInQuad(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InQuad,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseOutQuad(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::OutQuad,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInOutQuad(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InOutQuad,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInQuart(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InQuart,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseOutQuart(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::OutQuart,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInOutQuart(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InOutQuart,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInExpo(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InExpo,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseOutExpo(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::OutExpo,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInOutExpo(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InOutExpo,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInBack(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InBack,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseOutBack(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::OutBack,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInOutBack(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InOutBack,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInBounce(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InBounce,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseOutBounce(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::OutBounce,
+				durationInSeconds
+			)
+		);
+	}
+	constexpr AnimationBuilder<TimedAnimation> EaseInOutBounce(float durationInSeconds = TimedAnimation::DefaultDuration)
+	{
+		return AnimationBuilder(
+			TimedAnimation(
+				&ease::InOutBounce,
+				durationInSeconds
+			)
+		);
+	}
+	
 	class InstantAnimation
 	{
 	public:
@@ -531,7 +1003,6 @@ namespace ui
 
 		void Update(float deltaTime)
 		{
-			// Exit condition for performance reasons
 			if (m_Animation == nullptr)
 			{
 				return;
