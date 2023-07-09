@@ -13,6 +13,7 @@
 #include <algorithm> // std::clamp
 #include <numbers> // std::numbers::pi_v<float>
 #include <vector> // std::vector
+#include <cmath> // std::cos, std::sin
 
 namespace ui
 {
@@ -1121,6 +1122,8 @@ namespace ui
 		const T& GetTargetValue() const { return m_TargetValue; }
 		const T& GetCurrentValue() const { return m_CurrentValue; }
 		const T& Get() const { return m_CurrentValue; }
+
+		bool IsAnimating() const { return m_Animation != nullptr; }
 
 	private:
 
